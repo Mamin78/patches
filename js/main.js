@@ -32,6 +32,8 @@ const setupPanel = document.getElementById("setupPanel");
 const playArea = document.getElementById("playArea");
 const sizeSelect = document.getElementById("sizeSelect");
 const difficultySelect = document.getElementById("difficultySelect");
+const playSizeSelect = document.getElementById("playSizeSelect");
+const playDifficultySelect = document.getElementById("playDifficultySelect");
 const startBtn = document.getElementById("startBtn");
 const undoBtn = document.getElementById("undoBtn");
 const hintBtn = document.getElementById("hintBtn");
@@ -44,7 +46,7 @@ const winNextBtn = document.getElementById("winNextBtn");
 const winSetupBtn = document.getElementById("winSetupBtn");
 
 let dragStart = null;
-/** If drag began on a clue cell that already belongs to a patch, we may extend that patch. */
+/** If drag began on any cell of an existing patch, we may extend that patch. */
 let clueExtendAnchor = /** @type {{ r: number; c: number } | null} */ (null);
 /** @type {HTMLElement | null} */
 let activeCells = [];
@@ -663,6 +665,8 @@ function renderGrid() {
         num.className = "clue-num";
         const curEl = document.createElement("span");
         curEl.className = "clue-num-current";
+        curEl.dataset.cr = String(r);
+        curEl.dataset.cc = String(c);
         curEl.textContent = String(cur);
         const sep = document.createElement("span");
         sep.className = "clue-num-sep";
@@ -691,7 +695,7 @@ function onPointerDown(e) {
   const c = Number(t.dataset.c);
   dragStart = { r, c };
   clueExtendAnchor = null;
-  if (puzzle.clues[r][c] && player[r][c] >= 0) {
+  if (player[r][c] >= 0) {
     clueExtendAnchor = { r, c };
   }
   activeCells = [];
@@ -711,12 +715,78 @@ function onPointerMove(e) {
   highlightSelection(sel);
 }
 
+/**
+ * If this rectangle were painted now, which clue cells should show which “current” count?
+ * @param {{ r0: number; r1: number; c0: number; c1: number }} sel
+ * @param {{ r: number; c: number } | null} anchor
+ * @returns {Map<string, number> | null}
+ */
+function clueCountOverridesForSelection(sel, anchor) {
+  if (!puzzle) return null;
+  const state = rectPlayerState(sel);
+  if (state === -2) return null;
+
+  const wSel = sel.c1 - sel.c0 + 1;
+  const hSel = sel.r1 - sel.r0 + 1;
+  const area = wSel * hSel;
+
+  if (anchor && player[anchor.r][anchor.c] >= 0) {
+    const pid = player[anchor.r][anchor.c];
+    let onlyPidOrEmpty = true;
+    let hasEmpty = false;
+    iterRect(sel, (r, c) => {
+      if (player[r][c] < 0) hasEmpty = true;
+      else if (player[r][c] !== pid) onlyPidOrEmpty = false;
+    });
+    if (onlyPidOrEmpty && hasEmpty && area >= MIN_PATCH_AREA) {
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          if (puzzle.clues[r][c] && player[r][c] === pid) {
+            return new Map([[cellKey(r, c), area]]);
+          }
+        }
+      }
+      return null;
+    }
+  }
+
+  if (state === -1 && area >= MIN_PATCH_AREA) {
+    const ov = new Map();
+    iterRect(sel, (r, c) => {
+      if (puzzle.clues[r][c]) ov.set(cellKey(r, c), area);
+    });
+    return ov.size ? ov : null;
+  }
+
+  return null;
+}
+
+/** Updates only the “current” half of each clue (no full grid rebuild). */
+function refreshClueCurrentDigits(overrides) {
+  if (!puzzle || !gridHost) return;
+  const sizes = getPlayerPatchSizesMap();
+  gridHost.querySelectorAll(".clue-num-current").forEach((el) => {
+    const r = Number(el.dataset.cr);
+    const c = Number(el.dataset.cc);
+    if (Number.isNaN(r) || Number.isNaN(c)) return;
+    const key = cellKey(r, c);
+    let cur;
+    if (overrides && overrides.has(key)) cur = overrides.get(key);
+    else {
+      const pid = player[r][c];
+      cur = pid >= 0 && sizes.has(pid) ? sizes.get(pid) : 0;
+    }
+    el.textContent = String(cur);
+  });
+}
+
 function highlightSelection(sel) {
   gridHost.querySelectorAll(".cell.selecting").forEach((x) => x.classList.remove("selecting"));
   iterRect(sel, (r, c) => {
     const el = gridHost.querySelector(`[data-r="${r}"][data-c="${c}"]`);
     el?.classList.add("selecting");
   });
+  refreshClueCurrentDigits(clueCountOverridesForSelection(sel, clueExtendAnchor));
 }
 
 function onPointerUp(e) {
@@ -725,6 +795,7 @@ function onPointerUp(e) {
     dragStart = null;
     clueExtendAnchor = null;
     gridHost.querySelectorAll(".cell.selecting").forEach((x) => x.classList.remove("selecting"));
+    refreshClueCurrentDigits(null);
     return;
   }
   const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -738,6 +809,7 @@ function onPointerUp(e) {
   dragStart = null;
   clueExtendAnchor = null;
   gridHost.querySelectorAll(".cell.selecting").forEach((x) => x.classList.remove("selecting"));
+  refreshClueCurrentDigits(null);
 
   if (!isRectangleSelection(sel)) return;
 
@@ -747,25 +819,23 @@ function onPointerUp(e) {
     return;
   }
 
-  if (anchor && puzzle.clues[anchor.r][anchor.c]) {
+  if (anchor && player[anchor.r][anchor.c] >= 0) {
     const pid = player[anchor.r][anchor.c];
-    if (pid >= 0) {
-      let onlyPidOrEmpty = true;
-      let hasEmpty = false;
-      iterRect(sel, (r, c) => {
-        if (player[r][c] < 0) hasEmpty = true;
-        else if (player[r][c] !== pid) onlyPidOrEmpty = false;
-      });
-      if (onlyPidOrEmpty && hasEmpty) {
-        const wSel = sel.c1 - sel.c0 + 1;
-        const hSel = sel.r1 - sel.r0 + 1;
-        if (wSel * hSel < MIN_PATCH_AREA) {
-          showToast("Each patch must cover at least two cells.");
-          return;
-        }
-        applyExtendRectangle(sel, pid);
+    let onlyPidOrEmpty = true;
+    let hasEmpty = false;
+    iterRect(sel, (r, c) => {
+      if (player[r][c] < 0) hasEmpty = true;
+      else if (player[r][c] !== pid) onlyPidOrEmpty = false;
+    });
+    if (onlyPidOrEmpty && hasEmpty) {
+      const wSel = sel.c1 - sel.c0 + 1;
+      const hSel = sel.r1 - sel.r0 + 1;
+      if (wSel * hSel < MIN_PATCH_AREA) {
+        showToast("Each patch must cover at least two cells.");
         return;
       }
+      applyExtendRectangle(sel, pid);
+      return;
     }
   }
 
@@ -785,7 +855,7 @@ function onPointerUp(e) {
   if (wSel * hSel === 1) {
     const cr = sel.r0;
     const cc = sel.c0;
-    if (puzzle.clues[cr][cc] && player[cr][cc] >= 0) {
+    if (player[cr][cc] >= 0) {
       clearEntirePatch(player[cr][cc]);
       return;
     }
@@ -794,8 +864,23 @@ function onPointerUp(e) {
   paintRect(sel, true);
 }
 
+function syncSetupFromPlayControls() {
+  if (!playSizeSelect || !playDifficultySelect || !sizeSelect || !difficultySelect) return;
+  sizeSelect.value = playSizeSelect.value;
+  difficultySelect.value = playDifficultySelect.value;
+}
+
+function syncPlayControlsFromSetup() {
+  if (!playSizeSelect || !playDifficultySelect || !sizeSelect || !difficultySelect) return;
+  playSizeSelect.value = sizeSelect.value;
+  playDifficultySelect.value = difficultySelect.value;
+}
+
 function beginGame() {
   try {
+    if (playArea && !playArea.classList.contains("hidden")) {
+      syncSetupFromPlayControls();
+    }
     n = Number(sizeSelect.value);
     const difficulty = /** @type {'easy'|'medium'|'hard'|'expert'} */ (
       difficultySelect.value
@@ -809,6 +894,7 @@ function beginGame() {
     playing = true;
     setupPanel.classList.add("hidden");
     playArea.classList.remove("hidden");
+    syncPlayControlsFromSetup();
     playArea.scrollIntoView({ behavior: "smooth", block: "nearest" });
     renderGrid();
     timerText.textContent = "0:00";
@@ -847,8 +933,15 @@ function wireUi() {
     winModal?.classList.add("hidden");
     stopTimer();
     playing = false;
+    syncSetupFromPlayControls();
     playArea?.classList.add("hidden");
     setupPanel?.classList.remove("hidden");
+  });
+  playSizeSelect?.addEventListener("change", () => {
+    beginGame();
+  });
+  playDifficultySelect?.addEventListener("change", () => {
+    beginGame();
   });
   undoBtn?.addEventListener("click", undo);
   hintBtn?.addEventListener("click", hint);

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f3f2ef" />
+    <meta name="theme-color" content="#eceaf2" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Patches" />
     <title>Patches</title>
@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Outfit:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/styles.css" />
@@ -20,7 +20,7 @@
   <body>
     <div class="app">
       <header class="top-bar">
-        <div class="brand">Patches</div>
+        <div class="brand"><span class="brand-mark">◫</span> Patches</div>
         <div class="timer" id="timer" aria-live="polite">
           <span class="timer-icon" aria-hidden="true"></span>
           <span id="timerText">0:00</span>
@@ -44,10 +44,10 @@
         <div class="field-row">
           <label for="difficultySelect">Difficulty</label>
           <select id="difficultySelect" class="select">
-            <option value="easy">Easy — icons often on corners, clearer shapes</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard — more “any shape” clues, icons less corner‑biased</option>
-            <option value="expert">Expert — many “any” clues, anchors anywhere</option>
+            <option value="easy">Easy — fewer patches, forgiving “any” clues, corners often marked</option>
+            <option value="medium" selected>Medium — balanced patch count and shape hints</option>
+            <option value="hard">Hard — dense splits, interior‑biased rim, many “any shape” clues</option>
+            <option value="expert">Expert — maximum load; ~⅓+ of clues are “any” (many valid rectangles per area)</option>
           </select>
         </div>
         <p class="setup-hint">
@@ -56,17 +56,43 @@
           rectangles (each at least <strong>two</strong> cells) so every patch contains
           <strong>exactly one</strong> clue and matches it. Any correct tiling wins.
         </p>
-        <button type="button" class="btn btn-primary" id="startBtn">Start game</button>
+        <button type="button" class="btn btn-primary btn-primary-lg" id="startBtn">Start game</button>
       </section>
 
       <section class="play-area hidden" id="playArea">
+        <div class="play-controls card" id="playControls">
+          <div class="play-controls-row">
+            <label class="play-controls-field" for="playSizeSelect">
+              <span class="play-controls-label">Grid size</span>
+              <select id="playSizeSelect" class="select select-compact" aria-label="Grid size">
+                <option value="4">4 × 4</option>
+                <option value="5">5 × 5</option>
+                <option value="6" selected>6 × 6</option>
+                <option value="7">7 × 7</option>
+                <option value="8">8 × 8</option>
+                <option value="9">9 × 9</option>
+                <option value="10">10 × 10</option>
+              </select>
+            </label>
+            <label class="play-controls-field" for="playDifficultySelect">
+              <span class="play-controls-label">Difficulty</span>
+              <select id="playDifficultySelect" class="select select-compact" aria-label="Difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Expert</option>
+              </select>
+            </label>
+          </div>
+          <p class="play-controls-hint">Changing size or level starts a new puzzle.</p>
+        </div>
         <div class="board-wrap">
           <div class="grid-host" id="gridHost"></div>
         </div>
-        <div class="toolbar">
-          <button type="button" class="btn btn-pill" id="undoBtn">Undo</button>
-          <button type="button" class="btn btn-pill" id="hintBtn">Hint</button>
-          <button type="button" class="btn btn-pill btn-quiet" id="newBtn">New puzzle</button>
+        <div class="toolbar" role="toolbar" aria-label="Game actions">
+          <button type="button" class="btn btn-tool" id="undoBtn">Undo</button>
+          <button type="button" class="btn btn-tool" id="hintBtn">Hint</button>
+          <button type="button" class="btn btn-tool btn-tool-accent" id="newBtn">New</button>
         </div>
       </section>
 
@@ -99,8 +125,8 @@
         <p class="legend-note">Each clue shows <strong>filled cells / target area</strong> (e.g. 3/10). The icon further restricts valid dimensions when the patch is complete (except “any”). Invalid patches are cleared as soon as you finish a stroke.</p>
         <p class="legend-note subtle">
           Each patch covers at least two cells (no 1×1). Drag on empty cells to draw a new patch.
-          To grow a partial patch, start the drag on its <strong>clue cell</strong> and include empty cells in the rectangle.
-          <strong>Tap</strong> the clue cell once (no drag) to remove that whole patch.
+          To grow a partial patch, start the drag on <strong>any cell</strong> already in that patch and include empty cells in the rectangle.
+          <strong>Tap</strong> once (no drag) on any cell of a patch to remove that whole patch.
           <strong>Hint</strong> removes every filled region that does not exactly match a correct solution patch (use Undo if needed).
         </p>
       </footer>
@@ -111,8 +137,8 @@
           <h2>Solved</h2>
           <p id="winTime"></p>
           <div class="modal-actions">
-            <button type="button" class="btn btn-primary" id="winNextBtn">Play again</button>
-            <button type="button" class="btn btn-pill btn-full" id="winSetupBtn">Change size / difficulty</button>
+            <button type="button" class="btn btn-primary btn-full" id="winNextBtn">Play again</button>
+            <button type="button" class="btn btn-secondary btn-full" id="winSetupBtn">Change size / difficulty</button>
           </div>
         </div>
       </div>
