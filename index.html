@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Patches</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand">Patches</div>
+        <div class="timer" id="timer" aria-live="polite">
+          <span class="timer-icon" aria-hidden="true"></span>
+          <span id="timerText">0:00</span>
+        </div>
+      </header>
+
+      <section class="setup card" id="setupPanel">
+        <h1 class="setup-title">New puzzle</h1>
+        <div class="field-row">
+          <label for="sizeSelect">Grid size</label>
+          <select id="sizeSelect" class="select">
+            <option value="4">4 × 4</option>
+            <option value="5">5 × 5</option>
+            <option value="6" selected>6 × 6</option>
+            <option value="7">7 × 7</option>
+            <option value="8">8 × 8</option>
+            <option value="9">9 × 9</option>
+            <option value="10">10 × 10</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label for="difficultySelect">Difficulty</label>
+          <select id="difficultySelect" class="select">
+            <option value="easy">Easy — icons often on corners, clearer shapes</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard — more “any shape” clues, icons less corner‑biased</option>
+            <option value="expert">Expert — many “any” clues, anchors anywhere</option>
+          </select>
+        </div>
+        <p class="setup-hint">
+          Based on LinkedIn’s Patches / Shikaku: every clue shows the patch <strong>area</strong>
+          (cell count); the icon restricts shape (square / tall / wide / any). Cover the grid with
+          rectangles (each at least <strong>two</strong> cells) so every patch contains
+          <strong>exactly one</strong> clue and matches it. Any correct tiling wins.
+        </p>
+        <button type="button" class="btn btn-primary" id="startBtn">Start game</button>
+      </section>
+
+      <section class="play-area hidden" id="playArea">
+        <div class="board-wrap">
+          <div class="grid-host" id="gridHost"></div>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="btn btn-pill" id="undoBtn">Undo</button>
+          <button type="button" class="btn btn-pill" id="hintBtn">Hint</button>
+          <button type="button" class="btn btn-pill btn-quiet" id="newBtn">New puzzle</button>
+        </div>
+      </section>
+
+      <footer class="legend card">
+        <h2 class="legend-title">Complete each shape to fill the grid</h2>
+        <p class="legend-lead">
+          Each patch contains exactly one clue: a <strong>number</strong> (how many cells in that patch)
+          and a shape icon (or “any”). Inspired by
+          <a href="https://www.linkedin.com/pulse/from-pieces-patches-how-we-designed-linkedins-newest-game-clghf" target="_blank" rel="noopener">LinkedIn’s Patches design notes</a>
+          and Shikaku-style rules.
+        </p>
+        <ul class="legend-list">
+          <li>
+            <span class="clue-icon clue-square" aria-hidden="true"></span>
+            <span>Square — width equals height</span>
+          </li>
+          <li>
+            <span class="clue-icon clue-tall" aria-hidden="true"></span>
+            <span>Tall rectangle — taller than wide</span>
+          </li>
+          <li>
+            <span class="clue-icon clue-wide" aria-hidden="true"></span>
+            <span>Wide rectangle — wider than tall</span>
+          </li>
+          <li>
+            <span class="clue-icon clue-any" aria-hidden="true"></span>
+            <span>Any of the above</span>
+          </li>
+        </ul>
+        <p class="legend-note">Each clue shows <strong>filled cells / target area</strong> (e.g. 3/10). The icon further restricts valid dimensions when the patch is complete (except “any”). Invalid patches are cleared as soon as you finish a stroke.</p>
+        <p class="legend-note subtle">
+          Each patch covers at least two cells (no 1×1). Drag on empty cells to draw a new patch.
+          To grow a partial patch, start the drag on its <strong>clue cell</strong> and include empty cells in the rectangle.
+          <strong>Tap</strong> the clue cell once (no drag) to remove that whole patch.
+          <strong>Hint</strong> removes every filled region that does not exactly match a correct solution patch (use Undo if needed).
+        </p>
+      </footer>
+
+      <div class="toast hidden" id="toast" role="status"></div>
+      <div class="modal hidden" id="winModal" aria-modal="true" role="dialog">
+        <div class="modal-card card">
+          <h2>Solved</h2>
+          <p id="winTime"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-primary" id="winNextBtn">Play again</button>
+            <button type="button" class="btn btn-pill btn-full" id="winSetupBtn">Change size / difficulty</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- generator.js must load first: it defines MIN_PATCH_AREA used by main.js (same global scope). -->
+    <script src="js/generator.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
